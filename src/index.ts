@@ -52,6 +52,37 @@ global.mashlib = {
   }
 }
 
+// Data Island support
+const DATA_ISLAND_TYPES = [
+  'text/turtle',
+  'text/n3',
+  'application/ld+json',
+  'application/rdf+xml'
+]
+
+function loadDataIslands (store: any, baseURI: string): boolean {
+  let found = false
+  for (const type of DATA_ISLAND_TYPES) {
+    const scripts = document.querySelectorAll(`script[type="${type}"]`)
+    scripts.forEach((script) => {
+      const content = script.textContent
+      if (content && content.trim()) {
+        const base = script.getAttribute('data-base') || baseURI
+        try {
+          $rdf.parse(content, store, base, type)
+          found = true
+          console.log(`mashlib-di: loaded data island (${type}) with base ${base}`)
+        } catch (e) {
+          console.error(`mashlib-di: failed to parse data island (${type}):`, e)
+        }
+      }
+    })
+  }
+  return found
+}
+
+global.mashlib.loadDataIslands = loadDataIslands
+
 global.panes.runDataBrowser = function (uri?:string|$rdf.NamedNode|null) {
   // Set up cross-site proxy
   const fetcher: any = $rdf.Fetcher
@@ -65,6 +96,15 @@ global.panes.runDataBrowser = function (uri?:string|$rdf.NamedNode|null) {
     document.head.appendChild(webMonetizationTag)
   } catch (e) {
     console.error('Failed to add web monetization tag to page header')
+  }
+
+  // Load data islands before fetching remote data
+  const baseURI = uri
+    ? (typeof uri === 'string' ? uri : uri.value)
+    : window.location.href
+  const hasIslands = loadDataIslands(solidLogicSingleton.store, baseURI)
+  if (hasIslands) {
+    console.log('mashlib-di: data islands loaded into store')
   }
 
   // Authenticate the user
