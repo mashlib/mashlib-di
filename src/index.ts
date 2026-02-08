@@ -71,11 +71,6 @@ function loadDataIslands (store: any, baseURI: string): Set<string> {
         try {
           $rdf.parse(content, store, base, type)
           loadedBases.add(base)
-          // Mark as already fetched so rdflib doesn't try to fetch remotely
-          const fetcher = (store as any).fetcher || solidLogicSingleton.store.fetcher
-          if (fetcher) {
-            fetcher.requested[base] = true
-          }
           console.log(`mashlib-di: loaded data island (${type}) with base ${base}`)
         } catch (e) {
           console.error(`mashlib-di: failed to parse data island (${type}):`, e)
@@ -83,6 +78,32 @@ function loadDataIslands (store: any, baseURI: string): Set<string> {
       }
     })
   }
+
+  // Patch the fetcher to skip URIs already loaded from data islands
+  if (loadedBases.size > 0) {
+    const fetcher = store.fetcher
+    if (fetcher) {
+      const originalLoad = fetcher.load.bind(fetcher)
+      fetcher.load = function (uri: any, options?: any) {
+        const uriStr = typeof uri === 'string' ? uri : (uri.value || uri.uri || String(uri))
+        // Strip fragment
+        const docURI = uriStr.split('#')[0]
+        if (loadedBases.has(docURI)) {
+          console.log(`mashlib-di: skipping fetch for ${docURI} (loaded from data island)`)
+          return Promise.resolve(
+            { ok: true, status: 200, statusText: 'loaded from data island', url: docURI }
+          )
+        }
+        return originalLoad(uri, options)
+      }
+      // Also mark as requested for anything checking this directly
+      loadedBases.forEach((base) => {
+        fetcher.requested[base] = true
+        fetcher.requested[$rdf.sym(base).uri] = true
+      })
+    }
+  }
+
   return loadedBases
 }
 
