@@ -60,8 +60,8 @@ const DATA_ISLAND_TYPES = [
   'application/rdf+xml'
 ]
 
-function loadDataIslands (store: any, baseURI: string): boolean {
-  let found = false
+function loadDataIslands (store: any, baseURI: string): Set<string> {
+  const loadedBases = new Set<string>()
   for (const type of DATA_ISLAND_TYPES) {
     const scripts = document.querySelectorAll(`script[type="${type}"]`)
     scripts.forEach((script) => {
@@ -70,7 +70,12 @@ function loadDataIslands (store: any, baseURI: string): boolean {
         const base = script.getAttribute('data-base') || baseURI
         try {
           $rdf.parse(content, store, base, type)
-          found = true
+          loadedBases.add(base)
+          // Mark as already fetched so rdflib doesn't try to fetch remotely
+          const fetcher = (store as any).fetcher || solidLogicSingleton.store.fetcher
+          if (fetcher) {
+            fetcher.requested[base] = true
+          }
           console.log(`mashlib-di: loaded data island (${type}) with base ${base}`)
         } catch (e) {
           console.error(`mashlib-di: failed to parse data island (${type}):`, e)
@@ -78,7 +83,7 @@ function loadDataIslands (store: any, baseURI: string): boolean {
       }
     })
   }
-  return found
+  return loadedBases
 }
 
 global.mashlib.loadDataIslands = loadDataIslands
@@ -102,9 +107,9 @@ global.panes.runDataBrowser = function (uri?:string|$rdf.NamedNode|null) {
   const baseURI = uri
     ? (typeof uri === 'string' ? uri : uri.value)
     : window.location.href
-  const hasIslands = loadDataIslands(solidLogicSingleton.store, baseURI)
-  if (hasIslands) {
-    console.log('mashlib-di: data islands loaded into store')
+  const loadedBases = loadDataIslands(solidLogicSingleton.store, baseURI)
+  if (loadedBases.size > 0) {
+    console.log(`mashlib-di: ${loadedBases.size} data island(s) loaded into store`)
   }
 
   // Authenticate the user
