@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html id="docHTML">
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  <title>mashlib-di demo — data island</title>
+  <link type="text/css" rel="stylesheet" href="mash.css" />
+  <script type="text/javascript" src="mashlib.js"></script>
+
+  <!-- Data Island: Turtle embedded directly in the page -->
+  <script type="text/turtle" data-base="https://example.org/profile/card">
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+
+<#me> a foaf:Person ;
+  foaf:name "Alice Wonderland" ;
+  foaf:nick "alice" ;
+  foaf:mbox <mailto:alice@example.org> ;
+  foaf:homepage <https://alice.example.org/> ;
+  foaf:knows <https://bob.example.org/profile/card#me> ;
+  vcard:role "Linked Data Researcher" ;
+  rdfs:comment "This data was loaded from a data island embedded in the HTML — no server needed." .
+  </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uri = 'https://example.org/profile/card#me'
+    window.document.title = 'mashlib-di demo: ' + uri
+    const outliner = panes.getOutliner(document)
+
+    // Run the data browser — it will pick up the data island automatically
+    panes.runDataBrowser(uri)
+});
+</script>
+</head>
+<body>
+  <header id="PageHeader" role="banner" class="header-mash">
+    mashlib-di demo — data island
+  </header>
+  <main id="mainContent" tabindex="-1">
+    <div class="TabulatorOutline" id="me">
+      <table id="outline">
+        <thead>
+          <tr>
+            <th id="outlineHeader" scope="col"></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="GlobalDashboard" aria-label="Global Dashboard"></div>
+    </div>
+  </main>
+  <footer id="PageFooter" role="contentinfo">
+    <p style="padding:1em;color:#666;font-size:0.9em;">
+      Data loaded from &lt;script type="text/turtle"&gt; embedded in this page.
+      View source to see the data island.
+    </p>
+  </footer>
+  <style>
+    .header-mash {
+      width:100%;
+      padding:1em;
+      background-color:#bbccbb;
+    }
+  </style>
+</body>
+</html>
